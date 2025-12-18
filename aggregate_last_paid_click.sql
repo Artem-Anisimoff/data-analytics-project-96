@@ -70,10 +70,10 @@ ads_spend as (
         utm_source,
         utm_medium,
         utm_campaign,
-        null,
-        null,
-        null,
-        null,
+        null as column_alias1,
+        null as column_alias2,
+        null as column_alias3,
+        null as column_alias4,
         daily_spent
     from ya_ads
 )

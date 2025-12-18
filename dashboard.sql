@@ -79,7 +79,7 @@ SELECT
     source AS utm_source,
     medium AS utm_medium,
     EXTRACT(MONTH FROM visit_date) AS month_number,
-    EXTRACT(YEAR FROM visit_date) AS year,
+    EXTRACT(YEAR FROM visit_date) AS y3ar,
     TO_CHAR(visit_date, 'Month') AS month_name,
     COUNT(DISTINCT visitor_id) AS unique_visitors,
     COUNT(*) AS total_visits
@@ -216,7 +216,7 @@ ya_costs AS (
         utm_medium AS med,
         utm_campaign AS cmp,
         TO_CHAR(campaign_date, 'YYYY-MM-DD') AS day_key,
-        SUM(daily_spent) AS cost
+        SUM(daily_spent) AS co5t
     FROM ya_ads
     GROUP BY
         utm_source,
@@ -231,7 +231,7 @@ vk_costs AS (
         utm_medium AS med,
         utm_campaign AS cmp,
         TO_CHAR(campaign_date, 'YYYY-MM-DD') AS day_key,
-        SUM(daily_spent) AS cost
+        SUM(daily_spent) AS co5t
     FROM vk_ads
     GROUP BY
         utm_source,
@@ -381,7 +381,7 @@ result AS (
         t.utm_medium,
         t.utm_campaign,
         COUNT(DISTINCT t.visitor_id) AS visitors_count,
-        COALESCE(y.summ, v.summ) AS cost,
+        COALESCE(y.summ, v.summ) AS co5t,
         COUNT(DISTINCT t.lead_id) AS leads_count,
         ROUND(
             (COUNT(DISTINCT t.lead_id))::DECIMAL * 100
