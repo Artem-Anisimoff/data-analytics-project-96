@@ -1,12 +1,12 @@
 -- общее число визитов
-SELECT 
-	COUNT(*) AS total_visits_count,
+SELECT
+    COUNT(*) AS total_visits_count,
     COUNT(DISTINCT visitor_id) AS unique_visitors_count
 FROM sessions;
 
 
 -- уникальные визиты по источнику
-SELECT 
+SELECT
     source AS utm_source,
     COUNT(DISTINCT visitor_id) AS unique_visitors
 FROM sessions
@@ -15,7 +15,7 @@ ORDER BY unique_visitors DESC;
 
 
 -- основные каналы 
-SELECT 
+SELECT
     source AS utm_source,
     medium AS utm_medium,
     COUNT(DISTINCT visitor_id) AS unique_visitors,
@@ -25,124 +25,128 @@ SELECT
         PARTITION BY source, medium
     ), 1) AS avg_daily_visits
 FROM sessions
-GROUP BY 
+GROUP BY
     source,
     medium
 ORDER BY unique_visitors DESC;
 
 
 -- каналы которые приводят на сайт по дням
-SELECT 
-    DATE(visit_date) AS visit_date,
+SELECT
     source AS utm_source,
     medium AS utm_medium,
+    DATE(visit_date) AS visit_date,
     COUNT(DISTINCT visitor_id) AS unique_visitors,
     COUNT(*) AS total_visits
 FROM sessions
-WHERE visit_date >= '2023-06-01' 
-  AND visit_date <= '2023-06-30'
-GROUP BY 
+WHERE
+    visit_date >= '2023-06-01'
+    AND visit_date <= '2023-06-30'
+GROUP BY
     DATE(visit_date),
     source,
     medium
-ORDER BY 
+ORDER BY
     visit_date DESC,
     total_visits DESC;
 
 
 -- каналы которые приводят на сайт по неделям
-SELECT 
-    EXTRACT(WEEK FROM visit_date) AS week_number,
+SELECT
     DATE_TRUNC('week', visit_date)::DATE AS week_start,
     (DATE_TRUNC('week', visit_date) + INTERVAL '6 days')::DATE AS week_end,
     source AS utm_source,
     medium AS utm_medium,
+    EXTRACT(WEEK FROM visit_date) AS week_number,
     COUNT(DISTINCT visitor_id) AS unique_visitors,
     COUNT(*) AS total_visits
 FROM sessions
-WHERE visit_date >= '2023-06-01' 
-  AND visit_date <= '2023-06-30'
-GROUP BY 
+WHERE
+    visit_date >= '2023-06-01'
+    AND visit_date <= '2023-06-30'
+GROUP BY
     EXTRACT(WEEK FROM visit_date),
     DATE_TRUNC('week', visit_date),
     source,
     medium
-ORDER BY 
+ORDER BY
     week_start DESC,
     total_visits DESC;
 
 
 -- по месяцам
-SELECT 
+SELECT
+    source AS utm_source,
+    medium AS utm_medium,
     EXTRACT(MONTH FROM visit_date) AS month_number,
     EXTRACT(YEAR FROM visit_date) AS year,
     TO_CHAR(visit_date, 'Month') AS month_name,
-    source AS utm_source,
-    medium AS utm_medium,
     COUNT(DISTINCT visitor_id) AS unique_visitors,
     COUNT(*) AS total_visits
 FROM sessions
-WHERE visit_date >= '2023-06-01' 
-  AND visit_date <= '2023-06-30'
-GROUP BY 
+WHERE
+    visit_date >= '2023-06-01'
+    AND visit_date <= '2023-06-30'
+GROUP BY
     EXTRACT(MONTH FROM visit_date),
     EXTRACT(YEAR FROM visit_date),
     TO_CHAR(visit_date, 'Month'),
     source,
     medium
-ORDER BY 
+ORDER BY
     total_visits DESC;
 
 
 --сколько лидов к нам приходит 
-SELECT 
-    COUNT(DISTINCT visitor_id) AS unique_lead_authors
+SELECT COUNT(DISTINCT visitor_id) AS unique_lead_authors
 FROM leads;
 
 
 -- конверсия из клика в лид (общая)
 WITH clicks AS (
-    SELECT 
-        COUNT(DISTINCT visitor_id) AS total_unique_visitors
+    SELECT COUNT(DISTINCT visitor_id) AS total_unique_visitors
     FROM sessions
 ),
+
 leads_data AS (
-    SELECT 
-        COUNT(DISTINCT visitor_id) AS total_lead_authors
+    SELECT COUNT(DISTINCT visitor_id) AS total_lead_authors
     FROM leads
 )
-SELECT 
+
+SELECT
     c.total_unique_visitors,
     l.total_lead_authors,
-    ROUND(l.total_lead_authors * 100.0 / NULLIF(c.total_unique_visitors, 0), 2) AS click_to_lead_conversion_rate
-FROM clicks c
-CROSS JOIN leads_data l;
+    ROUND(
+        l.total_lead_authors * 100.0 / NULLIF(c.total_unique_visitors, 0), 2
+    ) AS click_to_lead_conversion_rate
+FROM clicks AS c
+CROSS JOIN leads_data AS l;
 
 
 -- из лида в оплату (общая)
 WITH all_leads AS (
-    SELECT 
-        COUNT(DISTINCT lead_id) AS total_leads
+    SELECT COUNT(DISTINCT lead_id) AS total_leads
     FROM leads
 ),
+
 purchases AS (
-    SELECT 
-        COUNT(DISTINCT lead_id) AS total_purchases
+    SELECT COUNT(DISTINCT lead_id) AS total_purchases
     FROM leads
     WHERE closing_reason = 'Успешно реализовано' OR status_id = 142
 )
-SELECT 
+
+SELECT
     a.total_leads,
     p.total_purchases,
-    ROUND(p.total_purchases * 100.0 / NULLIF(a.total_leads, 0), 2) AS lead_to_purchase_conversion_rate
-FROM all_leads a
-CROSS JOIN purchases p;
-
+    ROUND(p.total_purchases * 100.0 / NULLIF(a.total_leads, 0), 2)
+        AS lead_to_purchase_conversion_rate
+FROM all_leads AS a
+CROSS JOIN purchases AS p;
 
 
 -- затраты 
 WITH all_campaigns AS (
-    SELECT 
+    SELECT
         DATE(campaign_date) AS spend_date,
         utm_source,
         utm_medium,
@@ -150,15 +154,15 @@ WITH all_campaigns AS (
         SUM(daily_spent) AS daily_spent,
         'vk' AS ad_platform
     FROM vk_ads
-    GROUP BY 
+    GROUP BY
         DATE(campaign_date),
         utm_source,
         utm_medium,
         utm_campaign
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         DATE(campaign_date) AS spend_date,
         utm_source,
         utm_medium,
@@ -166,13 +170,14 @@ WITH all_campaigns AS (
         SUM(daily_spent) AS daily_spent,
         'yandex' AS ad_platform
     FROM ya_ads
-    GROUP BY 
+    GROUP BY
         DATE(campaign_date),
         utm_source,
         utm_medium,
         utm_campaign
 )
-SELECT 
+
+SELECT
     spend_date,
     utm_source,
     utm_medium,
@@ -184,276 +189,277 @@ ORDER BY spend_date DESC, daily_spent DESC;
 
 
 -- окупаемость + основные метрики и конверсии 
-with last_touch as (
-    select distinct on (sess.visitor_id)
+WITH last_touch AS (
+    SELECT DISTINCT ON (sess.visitor_id)
         sess.visitor_id,
         sess.visit_date,
-        sess.source as src,
-        sess.medium as med,
-        sess.campaign as cmp,
+        sess.source AS src,
+        sess.medium AS med,
+        sess.campaign AS cmp,
         ld.lead_id,
         ld.amount,
         ld.closing_reason
-    from sessions as sess
-    left join leads as ld
-        on ld.visitor_id = sess.visitor_id
-        and sess.visit_date <= ld.created_at
-    where sess.medium <> 'organic'
-    order by
-        sess.visitor_id,
-        sess.visit_date desc
+    FROM sessions AS sess
+    LEFT JOIN leads AS ld
+        ON
+            sess.visitor_id = ld.visitor_id
+            AND sess.visit_date <= ld.created_at
+    WHERE sess.medium <> 'organic'
+    ORDER BY
+        sess.visitor_id ASC,
+        sess.visit_date DESC
 ),
 
-ya_costs as (
-    select
-        utm_source as src,
-        utm_medium as med,
-        utm_campaign as cmp,
-        to_char(campaign_date, 'YYYY-MM-DD') as day_key,
-        sum(daily_spent) as cost
-    from ya_ads
-    group by
+ya_costs AS (
+    SELECT
+        utm_source AS src,
+        utm_medium AS med,
+        utm_campaign AS cmp,
+        TO_CHAR(campaign_date, 'YYYY-MM-DD') AS day_key,
+        SUM(daily_spent) AS cost
+    FROM ya_ads
+    GROUP BY
         utm_source,
         utm_medium,
         utm_campaign,
-        to_char(campaign_date, 'YYYY-MM-DD')
+        TO_CHAR(campaign_date, 'YYYY-MM-DD')
 ),
 
-vk_costs as (
-    select
-        utm_source as src,
-        utm_medium as med,
-        utm_campaign as cmp,
-        to_char(campaign_date, 'YYYY-MM-DD') as day_key,
-        sum(daily_spent) as cost
-    from vk_ads
-    group by
+vk_costs AS (
+    SELECT
+        utm_source AS src,
+        utm_medium AS med,
+        utm_campaign AS cmp,
+        TO_CHAR(campaign_date, 'YYYY-MM-DD') AS day_key,
+        SUM(daily_spent) AS cost
+    FROM vk_ads
+    GROUP BY
         utm_source,
         utm_medium,
         utm_campaign,
-        to_char(campaign_date, 'YYYY-MM-DD')
+        TO_CHAR(campaign_date, 'YYYY-MM-DD')
 ),
 
-utm_level as (
-    select
-        lt.src as utm_source,
-        lt.med as utm_medium,
-        lt.cmp as utm_campaign,
-        count(distinct lt.visitor_id) as visitors_cnt,
-        count(distinct lt.lead_id) as leads_cnt,
-        sum(
-            case
-                when lt.closing_reason = 'Успешная продажа' then 1
-                else 0
-            end
-        ) as purchases_cnt,
-        sum(lt.amount) as revenue_amt,
-        coalesce(yc.cost, vc.cost) as cost_amt
-    from last_touch as lt
-    left join ya_costs as yc
-        on to_char(lt.visit_date, 'YYYY-MM-DD') = yc.day_key
-        and lt.src = yc.src
-        and lt.med = yc.med
-        and lt.cmp = yc.cmp
-    left join vk_costs as vc
-        on to_char(lt.visit_date, 'YYYY-MM-DD') = vc.day_key
-        and lt.src = vc.src
-        and lt.med = vc.med
-        and lt.cmp = vc.cmp
-    group by
+utm_level AS (
+    SELECT
+        lt.src AS utm_source,
+        lt.med AS utm_medium,
+        lt.cmp AS utm_campaign,
+        COUNT(DISTINCT lt.visitor_id) AS visitors_cnt,
+        COUNT(DISTINCT lt.lead_id) AS leads_cnt,
+        SUM(
+            CASE
+                WHEN lt.closing_reason = 'Успешная продажа' THEN 1
+                ELSE 0
+            END
+        ) AS purchases_cnt,
+        SUM(lt.amount) AS revenue_amt,
+        COALESCE(yc.cost, vc.cost) AS cost_amt
+    FROM last_touch AS lt
+    LEFT JOIN ya_costs AS yc
+        ON
+            TO_CHAR(lt.visit_date, 'YYYY-MM-DD') = yc.day_key
+            AND lt.src = yc.src
+            AND lt.med = yc.med
+            AND lt.cmp = yc.cmp
+    LEFT JOIN vk_costs AS vc
+        ON
+            TO_CHAR(lt.visit_date, 'YYYY-MM-DD') = vc.day_key
+            AND lt.src = vc.src
+            AND lt.med = vc.med
+            AND lt.cmp = vc.cmp
+    GROUP BY
         lt.src,
         lt.med,
         lt.cmp,
-        coalesce(yc.cost, vc.cost)
+        COALESCE(yc.cost, vc.cost)
 )
 
-select
+SELECT
     utm_source,
-    sum(visitors_cnt) as total_visitors,
-    sum(cost_amt) as total_cost,
-    sum(leads_cnt) as total_leads,
-    round(
-        sum(leads_cnt)::decimal * 100
-        / sum(visitors_cnt)::decimal,
+    SUM(visitors_cnt) AS total_visitors,
+    SUM(cost_amt) AS total_cost,
+    SUM(leads_cnt) AS total_leads,
+    ROUND(
+        SUM(leads_cnt)::DECIMAL * 100
+        / SUM(visitors_cnt)::DECIMAL,
         2
-    ) as users_to_leads_percent,
-    round(
-        sum(purchases_cnt)::decimal * 100
-        / nullif(sum(leads_cnt), 0),
+    ) AS users_to_leads_percent,
+    ROUND(
+        SUM(purchases_cnt)::DECIMAL * 100
+        / NULLIF(SUM(leads_cnt), 0),
         2
-    ) as leads_to_purchases_percent,
-    sum(purchases_cnt) as total_purchases,
-    sum(revenue_amt) as total_revenue,
-    sum(revenue_amt) - sum(cost_amt) as total_profit,
-    round(
-        (sum(revenue_amt) - sum(cost_amt)) * 100
-        / nullif(sum(cost_amt), 0),
+    ) AS leads_to_purchases_percent,
+    SUM(purchases_cnt) AS total_purchases,
+    SUM(revenue_amt) AS total_revenue,
+    SUM(revenue_amt) - SUM(cost_amt) AS total_profit,
+    ROUND(
+        (SUM(revenue_amt) - SUM(cost_amt)) * 100
+        / NULLIF(SUM(cost_amt), 0),
         2
-    ) as roi,
-    round(
-        sum(cost_amt)
-        / nullif(sum(visitors_cnt), 0),
+    ) AS roi,
+    ROUND(
+        SUM(cost_amt)
+        / NULLIF(SUM(visitors_cnt), 0),
         2
-    ) as cpu,
-    round(
-        sum(cost_amt)
-        / nullif(sum(leads_cnt), 0),
+    ) AS cpu,
+    ROUND(
+        SUM(cost_amt)
+        / NULLIF(SUM(leads_cnt), 0),
         2
-    ) as cpl,
-    round(
-        sum(cost_amt)
-        / nullif(sum(purchases_cnt), 0),
+    ) AS cpl,
+    ROUND(
+        SUM(cost_amt)
+        / NULLIF(SUM(purchases_cnt), 0),
         2
-    ) as cppu
-from utm_level
-group by utm_source
-having
-    sum(purchases_cnt) > 0
-    and sum(cost_amt) > 0
-order by total_profit desc;
-
+    ) AS cppu
+FROM utm_level
+GROUP BY utm_source
+HAVING
+    SUM(purchases_cnt) > 0
+    AND SUM(cost_amt) > 0
+ORDER BY total_profit DESC;
 
 
 -- Прибыль по компаниям 
-with t as (
-    select distinct on (s.visitor_id)
+WITH t AS (
+    SELECT DISTINCT ON (s.visitor_id)
         s.visitor_id,
         s.visit_date,
-        s.source as utm_source,
-        s.medium as utm_medium,
-        s.campaign as utm_campaign,
+        s.source AS utm_source,
+        s.medium AS utm_medium,
+        s.campaign AS utm_campaign,
         l.lead_id,
         l.created_at,
         l.amount,
         l.closing_reason,
         l.status_id
-    from sessions as s
-    left join leads as l
-        on s.visitor_id = l.visitor_id
-        and s.visit_date <= l.created_at
-    where s.medium != 'organic'
-    order by
-        s.visitor_id asc,
-        s.visit_date desc
+    FROM sessions AS s
+    LEFT JOIN leads AS l
+        ON
+            s.visitor_id = l.visitor_id
+            AND s.visit_date <= l.created_at
+    WHERE s.medium <> 'organic'
+    ORDER BY
+        s.visitor_id ASC,
+        s.visit_date DESC
 ),
 
-ya as (
-    select
+ya AS (
+    SELECT
         utm_source,
         utm_medium,
         utm_campaign,
-        to_char(campaign_date, 'YYYY-MM-DD') as campaign_date,
-        sum(daily_spent) as summ
-    from ya_ads
-    group by
-        to_char(campaign_date, 'YYYY-MM-DD'),
+        TO_CHAR(campaign_date, 'YYYY-MM-DD') AS campaign_date,
+        SUM(daily_spent) AS summ
+    FROM ya_ads
+    GROUP BY
+        TO_CHAR(campaign_date, 'YYYY-MM-DD'),
         utm_source,
         utm_medium,
         utm_campaign
 ),
 
-vk as (
-    select
+vk AS (
+    SELECT
         utm_source,
         utm_medium,
         utm_campaign,
-        to_char(campaign_date, 'YYYY-MM-DD') as campaign_date,
-        sum(daily_spent) as summ
-    from vk_ads
-    group by
-        to_char(campaign_date, 'YYYY-MM-DD'),
+        TO_CHAR(campaign_date, 'YYYY-MM-DD') AS campaign_date,
+        SUM(daily_spent) AS summ
+    FROM vk_ads
+    GROUP BY
+        TO_CHAR(campaign_date, 'YYYY-MM-DD'),
         utm_source,
         utm_medium,
         utm_campaign
 ),
 
-result as (
-    select
+result AS (
+    SELECT
         t.utm_source,
         t.utm_medium,
         t.utm_campaign,
-        count(distinct t.visitor_id) as visitors_count,
-        coalesce(y.summ, v.summ) as cost,
-        count(distinct t.lead_id) as leads_count,
-        round(
-            cast(count(distinct t.lead_id) as decimal) * 100
-            / cast(count(distinct t.visitor_id) as decimal),
+        COUNT(DISTINCT t.visitor_id) AS visitors_count,
+        COALESCE(y.summ, v.summ) AS cost,
+        COUNT(DISTINCT t.lead_id) AS leads_count,
+        ROUND(
+            (COUNT(DISTINCT t.lead_id))::DECIMAL * 100
+            / (COUNT(DISTINCT t.visitor_id))::DECIMAL,
             2
-        ) as users_to_leads_percent,
-        sum(
-            case
-                when t.closing_reason = 'Успешная продажа' then 1
-                else 0
-            end
-        ) as purchases_count,
-        case
-            when sum(
-                case
-                    when t.closing_reason = 'Успешная продажа' then 1
-                    else 0
-                end
-            ) = 0 then 0
-            else round(
-                cast(
-                    sum(
-                        case
-                            when t.closing_reason = 'Успешная продажа' then 1
-                            else 0
-                        end
-                    ) as decimal
-                ) * 100
-                / cast(count(distinct t.lead_id) as decimal),
+        ) AS users_to_leads_percent,
+        SUM(
+            CASE
+                WHEN t.closing_reason = 'Успешная продажа' THEN 1
+                ELSE 0
+            END
+        ) AS purchases_count,
+        CASE
+            WHEN SUM(
+                CASE
+                    WHEN t.closing_reason = 'Успешная продажа' THEN 1
+                    ELSE 0
+                END
+            ) = 0 THEN 0
+            ELSE ROUND(
+                (SUM(
+                    CASE
+                        WHEN t.closing_reason = 'Успешная продажа' THEN 1
+                        ELSE 0
+                    END
+                ))::DECIMAL * 100
+                / (COUNT(DISTINCT t.lead_id))::DECIMAL,
                 2
             )
-        end as leads_to_purchases_percent,
-        sum(t.amount) as revenue
-    from t
-    left join ya as y
-        on to_char(t.visit_date, 'YYYY-MM-DD') = y.campaign_date
-        and t.utm_source = y.utm_source
-        and t.utm_medium = y.utm_medium
-        and t.utm_campaign = y.utm_campaign
-    left join vk as v
-        on to_char(t.visit_date, 'YYYY-MM-DD') = v.campaign_date
-        and t.utm_source = v.utm_source
-        and t.utm_medium = v.utm_medium
-        and t.utm_campaign = v.utm_campaign
-    group by
+        END AS leads_to_purchases_percent,
+        SUM(t.amount) AS revenue
+    FROM t
+    LEFT JOIN ya AS y
+        ON
+            TO_CHAR(t.visit_date, 'YYYY-MM-DD') = y.campaign_date
+            AND t.utm_source = y.utm_source
+            AND t.utm_medium = y.utm_medium
+            AND t.utm_campaign = y.utm_campaign
+    LEFT JOIN vk AS v
+        ON
+            TO_CHAR(t.visit_date, 'YYYY-MM-DD') = v.campaign_date
+            AND t.utm_source = v.utm_source
+            AND t.utm_medium = v.utm_medium
+            AND t.utm_campaign = v.utm_campaign
+    GROUP BY
         t.utm_source,
         t.utm_medium,
         t.utm_campaign,
-        coalesce(y.summ, v.summ)
+        COALESCE(y.summ, v.summ)
 )
 
-select
+SELECT
     utm_source,
     utm_medium,
     utm_campaign,
-    sum(visitors_count) as total_visitors,
-    sum(cost) as total_cost,
-    sum(leads_count) as total_leads,
-    round(
-        cast(sum(leads_count) as decimal) * 100
-        / cast(sum(visitors_count) as decimal),
+    SUM(visitors_count) AS total_visitors,
+    SUM(cost) AS total_cost,
+    SUM(leads_count) AS total_leads,
+    ROUND(
+        (SUM(leads_count))::DECIMAL * 100
+        / (SUM(visitors_count))::DECIMAL,
         2
-    ) as users_to_leads_percent,
-    case
-        when sum(purchases_count) = 0 then 0
-        else round(
-            cast(sum(purchases_count) as decimal) * 100
-            / cast(sum(leads_count) as decimal),
+    ) AS users_to_leads_percent,
+    CASE
+        WHEN SUM(purchases_count) = 0 THEN 0
+        ELSE ROUND(
+            (SUM(purchases_count))::DECIMAL * 100
+            / (SUM(leads_count))::DECIMAL,
             2
         )
-    end as leads_to_purchases_percent,
-    sum(purchases_count) as total_purchases,
-    coalesce(sum(revenue), 0) as total_revenue,
-    coalesce(sum(revenue), 0) - sum(cost) as total_profit
-from result
-group by
+    END AS leads_to_purchases_percent,
+    SUM(purchases_count) AS total_purchases,
+    COALESCE(SUM(revenue), 0) AS total_revenue,
+    COALESCE(SUM(revenue), 0) - SUM(cost) AS total_profit
+FROM result
+GROUP BY
     utm_source,
     utm_medium,
     utm_campaign
-having sum(cost) > 0
-order by total_profit desc;
-
-
+HAVING SUM(cost) > 0
+ORDER BY total_profit DESC;

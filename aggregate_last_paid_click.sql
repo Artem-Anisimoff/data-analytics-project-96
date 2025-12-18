@@ -16,8 +16,9 @@ with lpc_base as (
         ) as visit_rank
     from sessions as s
     left join leads as l
-        on s.visitor_id = l.visitor_id
-        and s.visit_date <= l.created_at
+        on
+            s.visitor_id = l.visitor_id
+            and s.visit_date <= l.created_at
     where s.medium in ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
 ),
 
@@ -31,9 +32,10 @@ traffic_metrics as (
         count(lead_id) as leads_count,
         sum(
             case
-                when closing_reason = 'Успешная продажа'
+                when
+                    closing_reason = 'Успешная продажа'
                     or status_id = 142
-                then 1
+                    then 1
                 else 0
             end
         ) as purchases_count,
@@ -77,10 +79,10 @@ ads_spend as (
 )
 
 select
-    to_char(visit_date, 'YYYY-MM-DD') as visit_date,
     utm_source,
     utm_medium,
     utm_campaign,
+    to_char(visit_date, 'YYYY-MM-DD') as visit_date,
     sum(visitors_count) as visitors_count,
     sum(total_cost) as total_cost,
     sum(leads_count) as leads_count,
