@@ -24,10 +24,11 @@ with lpc_base as (
 
 traffic_metrics as (
     select
-        date_trunc('day', visit_date) as visit_date,
         utm_source,
         utm_medium,
         utm_campaign,
+        null::numeric as total_cost,
+        date_trunc('day', visit_date) as visit_date,
         count(visitor_id) as visitors_count,
         count(lead_id) as leads_count,
         sum(
@@ -39,8 +40,7 @@ traffic_metrics as (
                 else 0
             end
         ) as purchases_count,
-        sum(amount) as revenue,
-        null::numeric as total_cost
+        sum(amount) as revenue
     from lpc_base
     where visit_rank = 1
     group by
@@ -56,10 +56,6 @@ ads_spend as (
         utm_source,
         utm_medium,
         utm_campaign,
-        null::bigint as visitors_count,
-        null::bigint as leads_count,
-        null::bigint as purchases_count,
-        null::numeric as revenue,
         daily_spent as total_cost
     from vk_ads
 
@@ -70,10 +66,6 @@ ads_spend as (
         utm_source,
         utm_medium,
         utm_campaign,
-        null as column_alias1,
-        null as column_alias2,
-        null as column_alias3,
-        null as column_alias4,
         daily_spent
     from ya_ads
 )
@@ -89,9 +81,31 @@ select
     sum(purchases_count) as purchases_count,
     sum(revenue) as revenue
 from (
-    select * from traffic_metrics
+    select
+        visit_date,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        visitors_count,
+        leads_count,
+        purchases_count,
+        revenue,
+        total_cost
+    from traffic_metrics
+
     union all
-    select * from ads_spend
+
+    select
+        visit_date,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        null as visitors_count,
+        null as leads_count,
+        null as purchases_count,
+        null as revenue,
+        total_cost
+    from ads_spend
 ) as combined_data
 group by
     visit_date,

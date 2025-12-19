@@ -39,9 +39,6 @@ SELECT
     COUNT(DISTINCT visitor_id) AS unique_visitors,
     COUNT(*) AS total_visits
 FROM sessions
-WHERE
-    visit_date >= '2023-06-01'
-    AND visit_date <= '2023-06-30'
 GROUP BY
     DATE(visit_date),
     source,
@@ -61,9 +58,6 @@ SELECT
     COUNT(DISTINCT visitor_id) AS unique_visitors,
     COUNT(*) AS total_visits
 FROM sessions
-WHERE
-    visit_date >= '2023-06-01'
-    AND visit_date <= '2023-06-30'
 GROUP BY
     EXTRACT(WEEK FROM visit_date),
     DATE_TRUNC('week', visit_date),
@@ -84,9 +78,6 @@ SELECT
     COUNT(DISTINCT visitor_id) AS unique_visitors,
     COUNT(*) AS total_visits
 FROM sessions
-WHERE
-    visit_date >= '2023-06-01'
-    AND visit_date <= '2023-06-30'
 GROUP BY
     EXTRACT(MONTH FROM visit_date),
     EXTRACT(YEAR FROM visit_date),
